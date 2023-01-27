@@ -5564,13 +5564,13 @@ async function buildSummary(files) {
   const Summary = NewSummary();
 
   for (const f of files) {
-    Summary.addHeading(f.filepath, 4)
-      .addLink("View Run in Flamegraph.com", f.url)
-      .addBreak()
-      .addImage(`https://flamegraph.com/api/preview/${f.key}`, f.filepath)
-      .addSeparator();
+    //    Summary.addHeading(f.filepath, 4)
+    //      .addLink("View Run in Flamegraph.com", f.url)
+    //      .addBreak()
+    //      .addImage(`https://flamegraph.com/api/preview/${f.key}`, f.filepath)
+    //      .addSeparator();
   }
-  await Summary.write();
+  //  await Summary.write();
 }
 
 async function run() {
