@@ -1,7 +1,11 @@
 # flamegraph.com github action
 Use this action to upload a flamegraph to [flamegraph.com](https://flamegraph.com/)
 
-For examples, check the file at `.github/workflows/upload-test.yml`
+```yaml
+- uses: pyroscope-io/flamegraph.com-github-action@main
+  with:
+    file: cpu.pprof
+```
 
 # Development
 ## Running locally
