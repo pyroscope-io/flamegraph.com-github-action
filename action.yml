@@ -4,5 +4,5 @@ runs:
   main: 'dist/index.js'
 inputs:
   file:
-    description: 'filepath of the profile'
+    description: 'filepath of the profile(s), globs are accepted'
     required: true

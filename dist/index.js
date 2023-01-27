@@ -5563,32 +5563,12 @@ function NewSummary() {
 async function buildSummary(files) {
   const Summary = NewSummary();
 
-  //  if (files.length === 1) {
-  //    const file = files[0];
-  //    core.setOutput("url", file.url);
-  //
-  //    await Summary.addHeading("Results", 2)
-  //      .addLink("View Run in Flamegraph.com", file.url)
-  //      .addImage(`https://flamegraph.com/api/preview/${file.key}`, file.filepath)
-  //      .write();
-  //
-  //    return;
-  //  }
-  //
-  //  const summaries = files.map((f) => {
-  //    return Summary.addHeading(f.filepath, 4)
-  //      .addLink("View Run in Flamegraph.com", f.url)
-  //      .addImage(`https://flamegraph.com/api/preview/${f.key}`, f.filepath)
-  //      .stringify();
-  //  });
-
   for (const f of files) {
     Summary.addHeading(f.filepath, 4)
-      .addLink("View Run in Flamegraph.com", f.url)
+      .addRaw(`<a href="${f.url}">View Run in Flamegraph.com</a><br />`)
       .addRaw(
-        `<a href="${f.filepath}"><img src="https://flamegraph.com/api/preview/${f.key}" /></a>`
+        `<a href="${f.url}" target="_blank"><img src="https://flamegraph.com/api/preview/${f.key}" /></a>`
       );
-    //      .addImage(`https://flamegraph.com/api/preview/${f.key}`, f.filepath, {})
   }
   await Summary.write();
 }
