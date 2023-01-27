@@ -2,12 +2,17 @@ const core = require("@actions/core");
 const httpm = require("@actions/http-client");
 const fs = require("fs").promises;
 const { SUMMARY_ENV_VAR } = require("@actions/core/lib/summary");
+const { promisify } = require("util");
+const g = require("glob");
+const glob = promisify(g);
 
 const http = new httpm.HttpClient("");
 
-async function upload() {
-  const filepath = core.getInput("file");
+async function findFiles() {
+  return glob(core.getInput("file"));
+}
 
+async function upload(filepath) {
   const file = await fs.readFile(filepath, { encoding: "base64" });
 
   const baseUrl = "https://www.flamegraph.com";
@@ -22,19 +27,76 @@ async function upload() {
     ...data,
   });
 
-  core.setOutput("url", res.result.url);
-
-  // TODO: summary is disabled in act?
-  if (process.env[SUMMARY_ENV_VAR] !== undefined) {
-    await core.summary
-      .addHeading("Results", 2)
-      .addLink("View Run in Flamegraph.com", res.result.url)
-      .addImage(
-        `https://flamegraph.com/api/preview/${res.result.key}`,
-        "Flamegraph"
-      )
-      .write();
-  }
+  return { url: res.result.url, key: res.result.key };
 }
 
-upload().catch((error) => core.setFailed(error.message));
+function NewSummary() {
+  // TODO: summary is disabled in act?
+  // create a proxy to debug if commands were called correctly
+  if (!process.env[SUMMARY_ENV_VAR]) {
+    const handler = {
+      get(target, prop, receiver) {
+        if (typeof target[prop] === "function") {
+          // Noop
+          return (...args) => {
+            console.log(`${prop}`, { args });
+            return receiver;
+          };
+        }
+        return null;
+      },
+    };
+    return new Proxy(core.summary, handler);
+  }
+
+  return core.summary;
+}
+
+async function buildSummary(files) {
+  const Summary = NewSummary();
+
+  if (files.length === 1) {
+    const file = files[0];
+    core.setOutput("url", file.url);
+
+    await Summary.addHeading("Results", 2)
+      .addLink("View Run in Flamegraph.com", file.url)
+      .addImage(`https://flamegraph.com/api/preview/${file.key}`, file.filepath)
+      .write();
+
+    return;
+  }
+
+  const summaries = files.map((f) => {
+    return Summary.addHeading(f.filepath, 4)
+      .addLink("View Run in Flamegraph.com", f.url)
+      .addImage(`https://flamegraph.com/api/preview/${f.key}`, f.filepath)
+      .stringify();
+  });
+
+  for (const s of summaries) {
+    await Summary.addHeading("Results", 2).addDetails("Details", s);
+  }
+  await Summary.write();
+}
+
+async function run() {
+  const files = (await findFiles()).map((a) => ({
+    filepath: a,
+  }));
+
+  for (const file of files) {
+    try {
+      const res = await upload(file.filepath);
+      file.url = res.url;
+      file.key = res.key;
+    } catch (error) {
+      core.setFailed(error.message);
+      return;
+    }
+  }
+
+  await buildSummary(files);
+}
+
+run();
