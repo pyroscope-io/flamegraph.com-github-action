@@ -5565,10 +5565,10 @@ async function buildSummary(files) {
 
   for (const f of files) {
     Summary.addHeading(f.filepath, 4)
-      .addRaw(`<a href="${f.url}">View Run in Flamegraph.com</a><br />`)
-      .addRaw(
-        `<a href="${f.url}" target="_blank"><img src="https://flamegraph.com/api/preview/${f.key}" /></a>`
-      );
+      .addLink("View Run in Flamegraph.com", f.url)
+      .addBreak()
+      .addImage(`https://flamegraph.com/api/preview/${f.key}`, f.filepath)
+      .addSeparator();
   }
   await Summary.write();
 }
