@@ -78,11 +78,11 @@ async function buildSummary(files) {
     Summary.addHeading(f.filepath, 4)
       .addLink("View Run in Flamegraph.com", f.url)
       .addRaw(
-        `[![${f.filepath}](f.filepath)](https://flamegraph.com/api/preview/${f.key})`
-      )
-      //      .addImage(`https://flamegraph.com/api/preview/${f.key}`, f.filepath, {})
-      .write();
+        `<a href="${f.filepath}"><img src="https://flamegraph.com/api/preview/${f.key}" /></a>`
+      );
+    //      .addImage(`https://flamegraph.com/api/preview/${f.key}`, f.filepath, {})
   }
+  await Summary.write();
 }
 
 async function run() {
