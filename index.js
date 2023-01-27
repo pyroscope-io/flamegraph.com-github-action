@@ -83,7 +83,6 @@ async function buildSummary(files) {
       //      .addImage(`https://flamegraph.com/api/preview/${f.key}`, f.filepath, {})
       .write();
   }
-  await Summary.write();
 }
 
 async function run() {

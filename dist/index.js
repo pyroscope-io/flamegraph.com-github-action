@@ -5563,27 +5563,33 @@ function NewSummary() {
 async function buildSummary(files) {
   const Summary = NewSummary();
 
-  if (files.length === 1) {
-    const file = files[0];
-    core.setOutput("url", file.url);
+  //  if (files.length === 1) {
+  //    const file = files[0];
+  //    core.setOutput("url", file.url);
+  //
+  //    await Summary.addHeading("Results", 2)
+  //      .addLink("View Run in Flamegraph.com", file.url)
+  //      .addImage(`https://flamegraph.com/api/preview/${file.key}`, file.filepath)
+  //      .write();
+  //
+  //    return;
+  //  }
+  //
+  //  const summaries = files.map((f) => {
+  //    return Summary.addHeading(f.filepath, 4)
+  //      .addLink("View Run in Flamegraph.com", f.url)
+  //      .addImage(`https://flamegraph.com/api/preview/${f.key}`, f.filepath)
+  //      .stringify();
+  //  });
 
-    await Summary.addHeading("Results", 2)
-      .addLink("View Run in Flamegraph.com", file.url)
-      .addImage(`https://flamegraph.com/api/preview/${file.key}`, file.filepath)
-      .write();
-
-    return;
-  }
-
-  const summaries = files.map((f) => {
-    return Summary.addHeading(f.filepath, 4)
+  for (const f of files) {
+    Summary.addHeading(f.filepath, 4)
       .addLink("View Run in Flamegraph.com", f.url)
-      .addImage(`https://flamegraph.com/api/preview/${f.key}`, f.filepath)
-      .stringify();
-  });
-
-  for (const s of summaries) {
-    await Summary.addHeading("Results", 2).addDetails("Details", s);
+      .addRaw(
+        `[![${f.filepath}](f.filepath)](https://flamegraph.com/api/preview/${f.key})`
+      )
+      //      .addImage(`https://flamegraph.com/api/preview/${f.key}`, f.filepath, {})
+      .write();
   }
   await Summary.write();
 }
