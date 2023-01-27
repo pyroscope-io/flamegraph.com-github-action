@@ -14,5 +14,8 @@ You can use [`act`](https://github.com/nektos/act)
 If you use `colima`, don't forget to specify the `DOCKER_HOST`:
 `DOCKER_HOST="unix://$HOME/.colima/docker.sock" act --container-architecture linux/amd64  --workflows .github/workflows/upload-test.yml`
 
+## Testing
+There's a test github action workflow, so feel free to open a PR and iterate there.
+
 # Publishing
 Run `yarn build`, and commit the `dist` directory.
