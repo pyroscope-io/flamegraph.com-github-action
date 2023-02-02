@@ -15,3 +15,5 @@ jobs:
         with:
           file: testdata/*
           postInPR: true
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
