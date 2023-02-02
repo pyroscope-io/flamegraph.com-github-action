@@ -1,11 +1,11 @@
 const core = require("@actions/core");
 const httpm = require("@actions/http-client");
+const github = require("@actions/github");
 const fs = require("fs").promises;
 const { SUMMARY_ENV_VAR } = require("@actions/core/lib/summary");
 const { promisify } = require("util");
 const g = require("glob");
 const glob = promisify(g);
-const danger = require("danger");
 
 const http = new httpm.HttpClient("");
 
@@ -68,12 +68,19 @@ async function buildSummary(files) {
   await Summary.write();
 }
 
-function postInBody(files) {
-  const md = files.map((f) => {
+function postInBody(files, ctx) {
+  const prNumber = ctx.payload.pull_request.number;
+  const octokit = new github.getOctokit(process.env.GITHUB_TOKEN);
+
+  const message = files.map((f) => {
     return `<a href="${f.url}" target="_blank"><img src="https://flamegraph.com/api/preview/${f.key}" /></a>`;
   });
 
-  return danger.markdown(md);
+  octokit.issues.createComment({
+    ...context.repo,
+    issue_number: prNumber,
+    body: message,
+  });
 }
 
 async function run() {
@@ -93,9 +100,13 @@ async function run() {
   }
 
   await buildSummary(files);
-  const shouldPostInPRBody = core.getInput("postInPR");
+
+  const context = github.context;
+  const shouldPostInPRBody =
+    core.getInput("postInPR") && context.payload.pull_request;
+
   if (shouldPostInPRBody) {
-    postInBody(files);
+    postInBody(files, context);
   }
 }
 
