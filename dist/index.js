@@ -2019,6 +2019,17 @@ function expand(str, isTop) {
 
 /***/ }),
 
+/***/ 408:
+/***/ (() => {
+
+"use strict";
+
+// This file represents the module that is exposed as the danger API
+throw "\nHey there, it looks like you're trying to import the danger module. Turns out\nthat the code you write in a Dangerfile.js is actually a bit of a sneaky hack. \n\nWhen running Danger, the import or require for Danger is removed before the code\nis evaluated. Instead all of the imports are added to the global runtime, so if\nyou are importing Danger to use one of it's functions - you should instead just\nuse the global object for the root DSL elements.\n\nThere is a spectrum thread for discussion here:\n  - https://spectrum.chat/?t=0a005b56-31ec-4919-9a28-ced623949d4d\n";
+//# sourceMappingURL=danger.js.map
+
+/***/ }),
+
 /***/ 863:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
@@ -5513,6 +5524,7 @@ const { SUMMARY_ENV_VAR } = __nccwpck_require__(327);
 const { promisify } = __nccwpck_require__(837);
 const g = __nccwpck_require__(957);
 const glob = promisify(g);
+const danger = __nccwpck_require__(408);
 
 const http = new httpm.HttpClient("");
 
@@ -5575,6 +5587,14 @@ async function buildSummary(files) {
   await Summary.write();
 }
 
+function postInBody(files) {
+  const md = files.map((f) => {
+    return `<a href="${f.url}" target="_blank"><img src="https://flamegraph.com/api/preview/${f.key}" /></a>`;
+  });
+
+  return danger.markdown(md);
+}
+
 async function run() {
   const files = (await findFiles()).map((a) => ({
     filepath: a,
@@ -5592,6 +5612,10 @@ async function run() {
   }
 
   await buildSummary(files);
+  const shouldPostInPRBody = core.getInput("postInPR");
+  if (shouldPostInPRBody) {
+    postInBody(files);
+  }
 }
 
 run();

@@ -6,3 +6,6 @@ inputs:
   file:
     description: 'filepath of the profile(s), globs are accepted'
     required: true
+  postInPR:
+    description: 'whether to post in the pr body'
+    default: false

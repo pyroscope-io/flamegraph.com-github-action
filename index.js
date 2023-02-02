@@ -5,6 +5,7 @@ const { SUMMARY_ENV_VAR } = require("@actions/core/lib/summary");
 const { promisify } = require("util");
 const g = require("glob");
 const glob = promisify(g);
+const danger = require("danger");
 
 const http = new httpm.HttpClient("");
 
@@ -67,6 +68,14 @@ async function buildSummary(files) {
   await Summary.write();
 }
 
+function postInBody(files) {
+  const md = files.map((f) => {
+    return `<a href="${f.url}" target="_blank"><img src="https://flamegraph.com/api/preview/${f.key}" /></a>`;
+  });
+
+  return danger.markdown(md);
+}
+
 async function run() {
   const files = (await findFiles()).map((a) => ({
     filepath: a,
@@ -84,6 +93,10 @@ async function run() {
   }
 
   await buildSummary(files);
+  const shouldPostInPRBody = core.getInput("postInPR");
+  if (shouldPostInPRBody) {
+    postInBody(files);
+  }
 }
 
 run();
