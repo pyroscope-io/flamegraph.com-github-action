@@ -12357,12 +12357,8 @@ function postInBody(files, ctx) {
     return `<a href="${f.url}" target="_blank"><img src="https://flamegraph.com/api/preview/${f.key}" /></a>`;
   });
 
-  console.log({
-    octokit,
-    issues: octokit.rest.issues,
-  });
   octokit.rest.issues.createComment({
-    ...context.repo,
+    ...ctx.repo,
     issue_number: prNumber,
     body: message,
   });
