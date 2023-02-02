@@ -12351,13 +12351,17 @@ async function buildSummary(files) {
 
 function postInBody(files, ctx) {
   const prNumber = ctx.payload.pull_request.number;
-  const octokit = new github.getOctokit(process.env.GITHUB_TOKEN);
+  const octokit = github.getOctokit(process.env.GITHUB_TOKEN);
 
   const message = files.map((f) => {
     return `<a href="${f.url}" target="_blank"><img src="https://flamegraph.com/api/preview/${f.key}" /></a>`;
   });
 
-  octokit.issues.createComment({
+  console.log({
+    octokit,
+    issues: octokit.rest.issues,
+  });
+  octokit.rest.issues.createComment({
     ...context.repo,
     issue_number: prNumber,
     body: message,
