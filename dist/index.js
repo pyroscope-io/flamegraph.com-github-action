@@ -12353,9 +12353,11 @@ function postInBody(files, ctx) {
   const prNumber = ctx.payload.pull_request.number;
   const octokit = github.getOctokit(process.env.GITHUB_TOKEN);
 
-  const message = files.map((f) => {
-    return `<a href="${f.url}" target="_blank"><img src="https://flamegraph.com/api/preview/${f.key}" /></a>`;
-  });
+  const message = files
+    .map((f) => {
+      return `<a href="${f.url}" target="_blank"><img src="https://flamegraph.com/api/preview/${f.key}" /></a>`;
+    })
+    .join("<br/>");
 
   octokit.rest.issues.createComment({
     ...ctx.repo,
