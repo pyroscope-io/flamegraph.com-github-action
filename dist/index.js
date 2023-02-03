@@ -12390,7 +12390,7 @@ async function postInBody(files, ctx) {
         f.key
       }" /></a>
           <br />
-          <a href="${f.url}">See in flamegraph.co.key</a>
+          <a href="${f.url}">See in flamegraph.com</a>
         </details>`;
     })
     .join("");
