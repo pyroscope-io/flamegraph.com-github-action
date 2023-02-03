@@ -14,6 +14,11 @@ async function findFiles() {
   return glob(core.getInput("file"));
 }
 
+function generateMagicString() {
+  const id = core.getInput("id") || "1";
+  return `<!-- flamegraph.com:${id} -->`;
+}
+
 async function upload(filepath) {
   const file = await fs.readFile(filepath, { encoding: "base64" });
 
@@ -72,9 +77,10 @@ function getToken() {
   return core.getInput("token");
 }
 
-async function findPreviousComment(magicString, repo, issueNumber) {
+async function findPreviousComment(repo, issueNumber) {
   // TODO: receive octokit as a dependency
   const octokit = github.getOctokit(getToken());
+  const magicString = generateMagicString();
 
   // TODO: handle pagination
   const { data: comments } = await octokit.rest.issues.listComments({
@@ -89,7 +95,8 @@ async function postInBody(files, ctx) {
   const prNumber = ctx.payload.pull_request.number;
   const octokit = github.getOctokit(getToken());
 
-  const magicString =
+  const magicString = generateMagicString();
+  const footer =
     'Created by <a href="https://github.com/pyroscope-io/flamegraph.com-github-action">Flamegraph.com Github Action</a>';
 
   // target="_blank" doesn't seem to work
@@ -107,13 +114,10 @@ async function postInBody(files, ctx) {
     })
     .join("");
 
-  message = `<h1>Flamegraph.com report</h1>` + message + `<br/>${magicString}`;
+  message =
+    `<h1>Flamegraph.com report</h1>` + message + `<br/>${footer}${magicString}`;
 
-  const previousComment = await findPreviousComment(
-    magicString,
-    ctx.repo,
-    prNumber
-  );
+  const previousComment = await findPreviousComment(ctx.repo, prNumber);
   if (previousComment) {
     await octokit.rest.issues.updateComment({
       ...ctx.repo,

@@ -12,3 +12,6 @@ inputs:
   token:
     description: 'required when postInPR is set'
     required: false
+  id:
+    description: 'set when more this action is used more than once'
+    required: false
