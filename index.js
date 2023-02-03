@@ -68,17 +68,49 @@ async function buildSummary(files) {
   await Summary.write();
 }
 
-function postInBody(files, ctx) {
+async function findPreviousComment(magicString, repo, issueNumber) {
+  // TODO: receive octokit as a dependency
+  const octokit = github.getOctokit(process.env.GITHUB_TOKEN);
+
+  // TODO: handle pagination
+  const { data: comments } = await octokit.rest.issues.listComments({
+    ...repo,
+    issue_number: issueNumber,
+  });
+
+  return comments.find((comment) => comment.body?.includes(magicString));
+}
+
+async function postInBody(files, ctx) {
   const prNumber = ctx.payload.pull_request.number;
   const octokit = github.getOctokit(process.env.GITHUB_TOKEN);
 
-  const message = files
-    .map((f) => {
-      return `<a href="${f.url}" target="_blank"><img src="https://flamegraph.com/api/preview/${f.key}" /></a>`;
-    })
-    .join("<br/>");
+  const magicString =
+    'Created by <a href="https://github.com/pyroscope-io/flamegraph.com-github-action">Flamegraph.com Github Action</a>';
 
-  octokit.rest.issues.createComment({
+  const message =
+    files
+      .map((f) => {
+        return `<a href="${f.url}" target="_blank"><img src="https://flamegraph.com/api/preview/${f.key}" /></a>`;
+      })
+      .join("<br/>") + `<br/>${magicString}`;
+
+  const previousComment = await findPreviousComment(
+    magicString,
+    ctx.repo,
+    prNumber
+  );
+  if (previousComment) {
+    await octokit.rest.issues.updateComment({
+      ...ctx.repo,
+      comment_id: previousComment.id,
+      issue_number: prNumber,
+      body: message,
+    });
+    return;
+  }
+
+  await octokit.rest.issues.createComment({
     ...ctx.repo,
     issue_number: prNumber,
     body: message,
@@ -89,6 +121,11 @@ async function run() {
   const files = (await findFiles()).map((a) => ({
     filepath: a,
   }));
+
+  if (!files.length) {
+    // TODO: maybe we should delete the existing comment
+    return;
+  }
 
   for (const file of files) {
     try {
@@ -108,7 +145,7 @@ async function run() {
     core.getInput("postInPR") && context.payload.pull_request;
 
   if (shouldPostInPRBody) {
-    postInBody(files, context);
+    await postInBody(files, context);
   }
 }
 
