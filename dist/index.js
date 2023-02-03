@@ -12287,6 +12287,7 @@ const { SUMMARY_ENV_VAR } = __nccwpck_require__(1327);
 const { promisify } = __nccwpck_require__(3837);
 const g = __nccwpck_require__(1957);
 const glob = promisify(g);
+const path = __nccwpck_require__(1017);
 
 const http = new httpm.HttpClient("");
 
@@ -12369,12 +12370,19 @@ async function postInBody(files, ctx) {
   const magicString =
     'Created by <a href="https://github.com/pyroscope-io/flamegraph.com-github-action">Flamegraph.com Github Action</a>';
 
-  const message =
-    files
-      .map((f) => {
-        return `<a href="${f.url}" target="_blank"><img src="https://flamegraph.com/api/preview/${f.key}" /></a>`;
-      })
-      .join("<br/>") + `<br/>${magicString}`;
+  let message = files
+    .map((f) => {
+      return `<details>
+          <summary>${path.basename(f.filepath)}</summary>
+          <a href="${
+            f.url
+          }" target="_blank"><img src="https://flamegraph.com/api/preview/${
+        f.key
+      }" /></a></details>`;
+    })
+    .join("");
+
+  message = `<h1>Flamegraph.com report</h1>` + message + `<br/>${magicString}`;
 
   const previousComment = await findPreviousComment(
     magicString,

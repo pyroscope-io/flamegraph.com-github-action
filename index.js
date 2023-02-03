@@ -6,6 +6,7 @@ const { SUMMARY_ENV_VAR } = require("@actions/core/lib/summary");
 const { promisify } = require("util");
 const g = require("glob");
 const glob = promisify(g);
+const path = require("path");
 
 const http = new httpm.HttpClient("");
 
@@ -88,12 +89,19 @@ async function postInBody(files, ctx) {
   const magicString =
     'Created by <a href="https://github.com/pyroscope-io/flamegraph.com-github-action">Flamegraph.com Github Action</a>';
 
-  const message =
-    files
-      .map((f) => {
-        return `<a href="${f.url}" target="_blank"><img src="https://flamegraph.com/api/preview/${f.key}" /></a>`;
-      })
-      .join("<br/>") + `<br/>${magicString}`;
+  let message = files
+    .map((f) => {
+      return `<details>
+          <summary>${path.basename(f.filepath)}</summary>
+          <a href="${
+            f.url
+          }" target="_blank"><img src="https://flamegraph.com/api/preview/${
+        f.key
+      }" /></a></details>`;
+    })
+    .join("");
+
+  message = `<h1>Flamegraph.com report</h1>` + message + `<br/>${magicString}`;
 
   const previousComment = await findPreviousComment(
     magicString,
