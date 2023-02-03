@@ -1,15 +1,22 @@
 const core = require("@actions/core");
 const httpm = require("@actions/http-client");
+const github = require("@actions/github");
 const fs = require("fs").promises;
 const { SUMMARY_ENV_VAR } = require("@actions/core/lib/summary");
 const { promisify } = require("util");
 const g = require("glob");
 const glob = promisify(g);
+const path = require("path");
 
 const http = new httpm.HttpClient("");
 
 async function findFiles() {
   return glob(core.getInput("file"));
+}
+
+function generateMagicString() {
+  const id = core.getInput("id") || "1";
+  return `<!-- flamegraph.com:${id} -->`;
 }
 
 async function upload(filepath) {
@@ -66,11 +73,77 @@ async function buildSummary(files) {
   }
   await Summary.write();
 }
+function getToken() {
+  return core.getInput("token");
+}
+
+async function findPreviousComment(repo, issueNumber) {
+  // TODO: receive octokit as a dependency
+  const octokit = github.getOctokit(getToken());
+  const magicString = generateMagicString();
+
+  // TODO: handle pagination
+  const { data: comments } = await octokit.rest.issues.listComments({
+    ...repo,
+    issue_number: issueNumber,
+  });
+
+  return comments.find((comment) => comment.body?.includes(magicString));
+}
+
+async function postInBody(files, ctx) {
+  const prNumber = ctx.payload.pull_request.number;
+  const octokit = github.getOctokit(getToken());
+
+  const magicString = generateMagicString();
+  const footer =
+    'Created by <a href="https://github.com/pyroscope-io/flamegraph.com-github-action">Flamegraph.com Github Action</a>';
+
+  // target="_blank" doesn't seem to work
+  // https://stackoverflow.com/questions/41915571/open-link-in-new-tab-with-github-markdown-using-target-blank
+  let message = files
+    .map((f) => {
+      return `<details>
+          <summary>${path.basename(f.filepath)}</summary>
+          <a href="${f.url}"><img src="https://flamegraph.com/api/preview/${
+        f.key
+      }" /></a>
+          <br />
+          <a href="${f.url}">See in flamegraph.com</a>
+        </details>`;
+    })
+    .join("");
+
+  message =
+    `<h1>Flamegraph.com report</h1>` + message + `<br/>${footer}${magicString}`;
+
+  const previousComment = await findPreviousComment(ctx.repo, prNumber);
+  if (previousComment) {
+    await octokit.rest.issues.updateComment({
+      ...ctx.repo,
+      comment_id: previousComment.id,
+      issue_number: prNumber,
+      body: message,
+    });
+    return;
+  }
+
+  await octokit.rest.issues.createComment({
+    ...ctx.repo,
+    issue_number: prNumber,
+    body: message,
+  });
+}
 
 async function run() {
   const files = (await findFiles()).map((a) => ({
     filepath: a,
   }));
+
+  if (!files.length) {
+    // TODO: maybe we should delete the existing comment
+    return;
+  }
 
   for (const file of files) {
     try {
@@ -84,6 +157,14 @@ async function run() {
   }
 
   await buildSummary(files);
+
+  const context = github.context;
+  const shouldPostInPRBody =
+    core.getInput("postInPR") && context.payload.pull_request;
+
+  if (shouldPostInPRBody) {
+    await postInBody(files, context);
+  }
 }
 
 run();

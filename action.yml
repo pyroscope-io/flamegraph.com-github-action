@@ -6,3 +6,12 @@ inputs:
   file:
     description: 'filepath of the profile(s), globs are accepted'
     required: true
+  postInPR:
+    description: 'allow posting the flamegraph in the PR as a comment'
+    default: false
+  token:
+    description: 'required when postInPR is set'
+    required: false
+  id:
+    description: 'set when more this action is used more than once'
+    required: false
