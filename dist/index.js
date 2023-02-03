@@ -1,6 +1,176 @@
 /******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
 
+/***/ 4822:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const core_1 = __importDefault(__nccwpck_require__(2186));
+const http_client_1 = __importDefault(__nccwpck_require__(6255));
+const github_1 = __importDefault(__nccwpck_require__(5438));
+const fs_1 = __nccwpck_require__(7147);
+const summary_1 = __nccwpck_require__(1327);
+const util_1 = __nccwpck_require__(3837);
+const glob_1 = __importDefault(__nccwpck_require__(1957));
+const path_1 = __importDefault(__nccwpck_require__(1017));
+const glob = (0, util_1.promisify)(glob_1.default);
+const http = new http_client_1.default.HttpClient("");
+function findFiles() {
+    return __awaiter(this, void 0, void 0, function* () {
+        return glob(core_1.default.getInput("file"));
+    });
+}
+function generateMagicString() {
+    const id = core_1.default.getInput("id") || "1";
+    return `<!-- flamegraph.com:${id} -->`;
+}
+function upload(filepath) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const file = yield fs_1.promises.readFile(filepath, { encoding: "base64" });
+        const baseUrl = "https://www.flamegraph.com";
+        const data = {
+            filename: filepath,
+            name: filepath,
+            profile: file,
+        };
+        const res = yield http.postJson(`${baseUrl}/api/upload/v1`, Object.assign({}, data));
+        if (!res || !res.result) {
+            throw new Error(`Error uploading a flamegraph. Response contains '${JSON.stringify(res.result)}'`);
+        }
+        return { url: res.result.url, key: res.result.key };
+    });
+}
+function NewSummary() {
+    // TODO: summary is disabled in act?
+    // create a proxy to debug if commands were called correctly
+    if (!process.env[summary_1.SUMMARY_ENV_VAR]) {
+        const handler = {
+            get(target, prop, receiver) {
+                if (typeof target[prop] === "function") {
+                    // Noop
+                    return (...args) => {
+                        console.log(`${prop}`, { args });
+                        return receiver;
+                    };
+                }
+                return null;
+            },
+        };
+        return new Proxy(core_1.default.summary, handler);
+    }
+    return core_1.default.summary;
+}
+function buildSummary(files) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const Summary = NewSummary();
+        for (const f of files) {
+            Summary.addHeading(f.filepath, 4)
+                .addLink("View Run in Flamegraph.com", f.url)
+                .addBreak()
+                .addRaw(`<a href="${f.url}" target="_blank"><img src="https://flamegraph.com/api/preview/${f.key}" /></a>`)
+                .addSeparator();
+        }
+        yield Summary.write();
+    });
+}
+function getToken() {
+    return core_1.default.getInput("token");
+}
+function findPreviousComment(repo, issueNumber) {
+    return __awaiter(this, void 0, void 0, function* () {
+        // TODO: receive octokit as a dependency
+        const octokit = github_1.default.getOctokit(getToken());
+        const magicString = generateMagicString();
+        // TODO: handle pagination
+        const { data: comments } = yield octokit.rest.issues.listComments(Object.assign(Object.assign({}, repo), { issue_number: issueNumber }));
+        return comments.find((comment) => { var _a; return (_a = comment.body) === null || _a === void 0 ? void 0 : _a.includes(magicString); });
+    });
+}
+function postInBody(files, ctx) {
+    return __awaiter(this, void 0, void 0, function* () {
+        if (!ctx.payload.pull_request) {
+            throw new Error("Not a pull request");
+        }
+        const prNumber = ctx.payload.pull_request.number;
+        const octokit = github_1.default.getOctokit(getToken());
+        const magicString = generateMagicString();
+        const footer = 'Created by <a href="https://github.com/pyroscope-io/flamegraph.com-github-action">Flamegraph.com Github Action</a>';
+        // target="_blank" doesn't seem to work
+        // https://stackoverflow.com/questions/41915571/open-link-in-new-tab-with-github-markdown-using-target-blank
+        let message = files
+            .map((f) => {
+            return `<details>
+          <summary>${path_1.default.basename(f.filepath)}</summary>
+          <a href="${f.url}"><img src="https://flamegraph.com/api/preview/${f.key}" /></a>
+          <br />
+          <a href="${f.url}">See in flamegraph.com</a>
+        </details>`;
+        })
+            .join("");
+        message =
+            `<h1>Flamegraph.com report</h1>` + message + `<br/>${footer}${magicString}`;
+        const previousComment = yield findPreviousComment(ctx.repo, prNumber);
+        if (previousComment) {
+            yield octokit.rest.issues.updateComment(Object.assign(Object.assign({}, ctx.repo), { comment_id: previousComment.id, issue_number: prNumber, body: message }));
+            return;
+        }
+        yield octokit.rest.issues.createComment(Object.assign(Object.assign({}, ctx.repo), { issue_number: prNumber, body: message }));
+    });
+}
+function run() {
+    return __awaiter(this, void 0, void 0, function* () {
+        const files = (yield findFiles()).map((a) => ({
+            filepath: a,
+        }));
+        if (!files.length) {
+            // TODO: maybe we should delete the existing comment
+            return;
+        }
+        const uploadedFlamegraphs = [];
+        for (const file of files) {
+            try {
+                const res = yield upload(file.filepath);
+                uploadedFlamegraphs.push({
+                    filepath: file.filepath,
+                    url: res.url,
+                    key: res.key,
+                });
+            }
+            catch (error) {
+                let errMessage = error instanceof Error
+                    ? error.message
+                    : `Error uploading flamegraph: ${error}`;
+                core_1.default.setFailed(errMessage);
+                return;
+            }
+        }
+        yield buildSummary(uploadedFlamegraphs);
+        const context = github_1.default.context;
+        const shouldPostInPRBody = core_1.default.getInput("postInPR") && context.payload.pull_request;
+        if (shouldPostInPRBody) {
+            yield postInBody(uploadedFlamegraphs, context);
+        }
+    });
+}
+run();
+
+
+/***/ }),
+
 /***/ 7351:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -12276,182 +12446,12 @@ module.exports = JSON.parse('[[[0,44],"disallowed_STD3_valid"],[[45,46],"valid"]
 /******/ 	if (typeof __nccwpck_require__ !== 'undefined') __nccwpck_require__.ab = __dirname + "/";
 /******/ 	
 /************************************************************************/
-var __webpack_exports__ = {};
-// This entry need to be wrapped in an IIFE because it need to be isolated against other modules in the chunk.
-(() => {
-const core = __nccwpck_require__(2186);
-const httpm = __nccwpck_require__(6255);
-const github = __nccwpck_require__(5438);
-const fs = (__nccwpck_require__(7147).promises);
-const { SUMMARY_ENV_VAR } = __nccwpck_require__(1327);
-const { promisify } = __nccwpck_require__(3837);
-const g = __nccwpck_require__(1957);
-const glob = promisify(g);
-const path = __nccwpck_require__(1017);
-
-const http = new httpm.HttpClient("");
-
-async function findFiles() {
-  return glob(core.getInput("file"));
-}
-
-function generateMagicString() {
-  const id = core.getInput("id") || "1";
-  return `<!-- flamegraph.com:${id} -->`;
-}
-
-async function upload(filepath) {
-  const file = await fs.readFile(filepath, { encoding: "base64" });
-
-  const baseUrl = "https://www.flamegraph.com";
-
-  const data = {
-    filename: filepath,
-    name: filepath,
-    profile: file,
-  };
-
-  const res = await http.postJson(`${baseUrl}/api/upload/v1`, {
-    ...data,
-  });
-
-  return { url: res.result.url, key: res.result.key };
-}
-
-function NewSummary() {
-  // TODO: summary is disabled in act?
-  // create a proxy to debug if commands were called correctly
-  if (!process.env[SUMMARY_ENV_VAR]) {
-    const handler = {
-      get(target, prop, receiver) {
-        if (typeof target[prop] === "function") {
-          // Noop
-          return (...args) => {
-            console.log(`${prop}`, { args });
-            return receiver;
-          };
-        }
-        return null;
-      },
-    };
-    return new Proxy(core.summary, handler);
-  }
-
-  return core.summary;
-}
-
-async function buildSummary(files) {
-  const Summary = NewSummary();
-
-  for (const f of files) {
-    Summary.addHeading(f.filepath, 4)
-      .addLink("View Run in Flamegraph.com", f.url)
-      .addBreak()
-      .addRaw(
-        `<a href="${f.url}" target="_blank"><img src="https://flamegraph.com/api/preview/${f.key}" /></a>`
-      )
-      .addSeparator();
-  }
-  await Summary.write();
-}
-function getToken() {
-  return core.getInput("token");
-}
-
-async function findPreviousComment(repo, issueNumber) {
-  // TODO: receive octokit as a dependency
-  const octokit = github.getOctokit(getToken());
-  const magicString = generateMagicString();
-
-  // TODO: handle pagination
-  const { data: comments } = await octokit.rest.issues.listComments({
-    ...repo,
-    issue_number: issueNumber,
-  });
-
-  return comments.find((comment) => comment.body?.includes(magicString));
-}
-
-async function postInBody(files, ctx) {
-  const prNumber = ctx.payload.pull_request.number;
-  const octokit = github.getOctokit(getToken());
-
-  const magicString = generateMagicString();
-  const footer =
-    'Created by <a href="https://github.com/pyroscope-io/flamegraph.com-github-action">Flamegraph.com Github Action</a>';
-
-  // target="_blank" doesn't seem to work
-  // https://stackoverflow.com/questions/41915571/open-link-in-new-tab-with-github-markdown-using-target-blank
-  let message = files
-    .map((f) => {
-      return `<details>
-          <summary>${path.basename(f.filepath)}</summary>
-          <a href="${f.url}"><img src="https://flamegraph.com/api/preview/${
-        f.key
-      }" /></a>
-          <br />
-          <a href="${f.url}">See in flamegraph.com</a>
-        </details>`;
-    })
-    .join("");
-
-  message =
-    `<h1>Flamegraph.com report</h1>` + message + `<br/>${footer}${magicString}`;
-
-  const previousComment = await findPreviousComment(ctx.repo, prNumber);
-  if (previousComment) {
-    await octokit.rest.issues.updateComment({
-      ...ctx.repo,
-      comment_id: previousComment.id,
-      issue_number: prNumber,
-      body: message,
-    });
-    return;
-  }
-
-  await octokit.rest.issues.createComment({
-    ...ctx.repo,
-    issue_number: prNumber,
-    body: message,
-  });
-}
-
-async function run() {
-  const files = (await findFiles()).map((a) => ({
-    filepath: a,
-  }));
-
-  if (!files.length) {
-    // TODO: maybe we should delete the existing comment
-    return;
-  }
-
-  for (const file of files) {
-    try {
-      const res = await upload(file.filepath);
-      file.url = res.url;
-      file.key = res.key;
-    } catch (error) {
-      core.setFailed(error.message);
-      return;
-    }
-  }
-
-  await buildSummary(files);
-
-  const context = github.context;
-  const shouldPostInPRBody =
-    core.getInput("postInPR") && context.payload.pull_request;
-
-  if (shouldPostInPRBody) {
-    await postInBody(files, context);
-  }
-}
-
-run();
-
-})();
-
-module.exports = __webpack_exports__;
+/******/ 	
+/******/ 	// startup
+/******/ 	// Load entry module and return exports
+/******/ 	// This entry module is referenced by other modules so it can't be inlined
+/******/ 	var __webpack_exports__ = __nccwpck_require__(4822);
+/******/ 	module.exports = __webpack_exports__;
+/******/ 	
 /******/ })()
 ;
