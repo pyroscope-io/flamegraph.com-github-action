@@ -11,16 +11,16 @@ const glob = promisify(g);
 
 const http = new httpm.HttpClient("");
 
-async function findFiles() {
+async function findFiles(): ReturnType<typeof glob> {
   return glob(core.getInput("file"));
 }
 
-function generateMagicString() {
+function generateMagicString(): string {
   const id = core.getInput("id") || "1";
   return `<!-- flamegraph.com:${id} -->`;
 }
 
-async function upload(filepath: string) {
+async function upload(filepath: string): Promise<{ url: string; key: string }> {
   const file = await fs.readFile(filepath, { encoding: "base64" });
 
   const baseUrl = "https://www.flamegraph.com";
@@ -48,15 +48,17 @@ async function upload(filepath: string) {
   return { url: res.result.url, key: res.result.key };
 }
 
-function NewSummary() {
+function NewSummary(): typeof core.summary {
   // TODO: summary is disabled in act?
   // create a proxy to debug if commands were called correctly
   if (!process.env[SUMMARY_ENV_VAR]) {
     const handler = {
-      get(target: any, prop: any, receiver: any) {
+      // eslint-disable-next-line  @typescript-eslint/no-explicit-any
+      get(target: any, prop: string, receiver: any) {
         if (typeof target[prop] === "function") {
           // Noop
-          return (...args: any[]) => {
+          return (...args: unknown[]) => {
+            // eslint-disable-next-line  no-console
             console.log(`${prop}`, { args });
             return receiver;
           };
@@ -76,7 +78,7 @@ type UploadedFlamegraph = {
   key: string;
 };
 
-async function buildSummary(files: UploadedFlamegraph[]) {
+async function buildSummary(files: UploadedFlamegraph[]): Promise<void> {
   const Summary = NewSummary();
 
   for (const f of files) {
@@ -90,14 +92,14 @@ async function buildSummary(files: UploadedFlamegraph[]) {
   }
   await Summary.write();
 }
-function getToken() {
+function getToken(): string {
   return core.getInput("token");
 }
 
 async function findPreviousComment(
   repo: typeof github.context.repo,
   issueNumber: typeof github.context.issue.number
-) {
+): Promise<{ id: number } | undefined> {
   // TODO: receive octokit as a dependency
   const octokit = github.getOctokit(getToken());
   const magicString = generateMagicString();
@@ -114,7 +116,7 @@ async function findPreviousComment(
 async function postInBody(
   files: UploadedFlamegraph[],
   ctx: typeof github.context
-) {
+): Promise<void> {
   if (!ctx.payload.pull_request) {
     throw new Error("Not a pull request");
   }
@@ -140,8 +142,7 @@ async function postInBody(
     })
     .join("");
 
-  message =
-    `<h1>Flamegraph.com report</h1>` + message + `<br/>${footer}${magicString}`;
+  message = `<h1>Flamegraph.com report</h1>${message}<br/>${footer}${magicString}`;
 
   const previousComment = await findPreviousComment(ctx.repo, prNumber);
   if (previousComment) {
@@ -161,7 +162,7 @@ async function postInBody(
   });
 }
 
-async function run() {
+async function run(): Promise<void> {
   const files = (await findFiles()).map((a) => ({
     filepath: a,
   }));
@@ -181,7 +182,7 @@ async function run() {
         key: res.key,
       });
     } catch (error: unknown) {
-      let errMessage =
+      const errMessage =
         error instanceof Error
           ? error.message
           : `Error uploading flamegraph: ${error}`;
