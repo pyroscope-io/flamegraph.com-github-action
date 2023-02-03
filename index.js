@@ -68,10 +68,13 @@ async function buildSummary(files) {
   }
   await Summary.write();
 }
+function getToken() {
+  return core.getInput("token");
+}
 
 async function findPreviousComment(magicString, repo, issueNumber) {
   // TODO: receive octokit as a dependency
-  const octokit = github.getOctokit(process.env.GITHUB_TOKEN);
+  const octokit = github.getOctokit(getToken());
 
   // TODO: handle pagination
   const { data: comments } = await octokit.rest.issues.listComments({
@@ -84,7 +87,7 @@ async function findPreviousComment(magicString, repo, issueNumber) {
 
 async function postInBody(files, ctx) {
   const prNumber = ctx.payload.pull_request.number;
-  const octokit = github.getOctokit(process.env.GITHUB_TOKEN);
+  const octokit = github.getOctokit(getToken());
 
   const magicString =
     'Created by <a href="https://github.com/pyroscope-io/flamegraph.com-github-action">Flamegraph.com Github Action</a>';
