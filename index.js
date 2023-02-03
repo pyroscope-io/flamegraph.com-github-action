@@ -89,15 +89,18 @@ async function postInBody(files, ctx) {
   const magicString =
     'Created by <a href="https://github.com/pyroscope-io/flamegraph.com-github-action">Flamegraph.com Github Action</a>';
 
+  // target="_blank" doesn't seem to work
+  // https://stackoverflow.com/questions/41915571/open-link-in-new-tab-with-github-markdown-using-target-blank
   let message = files
     .map((f) => {
       return `<details>
           <summary>${path.basename(f.filepath)}</summary>
-          <a href="${
-            f.url
-          }" target="_blank"><img src="https://flamegraph.com/api/preview/${
+          <a href="${f.url}"><img src="https://flamegraph.com/api/preview/${
         f.key
-      }" /></a></details>`;
+      }" /></a>
+          <br />
+          <a href="${f.url}">See in flamegraph.co.key</a>
+        </details>`;
     })
     .join("");
 
