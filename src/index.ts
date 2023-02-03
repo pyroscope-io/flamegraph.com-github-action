@@ -1,6 +1,6 @@
-import core from "@actions/core";
-import httpm from "@actions/http-client";
-import github from "@actions/github";
+import * as core from "@actions/core";
+import * as httpm from "@actions/http-client";
+import * as github from "@actions/github";
 import { promises as fs } from "fs";
 import { SUMMARY_ENV_VAR } from "@actions/core/lib/summary";
 import { promisify } from "util";

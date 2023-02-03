@@ -6,6 +6,29 @@
 
 "use strict";
 
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -19,23 +42,23 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-const core_1 = __importDefault(__nccwpck_require__(2186));
-const http_client_1 = __importDefault(__nccwpck_require__(6255));
-const github_1 = __importDefault(__nccwpck_require__(5438));
+const core = __importStar(__nccwpck_require__(2186));
+const httpm = __importStar(__nccwpck_require__(6255));
+const github = __importStar(__nccwpck_require__(5438));
 const fs_1 = __nccwpck_require__(7147);
 const summary_1 = __nccwpck_require__(1327);
 const util_1 = __nccwpck_require__(3837);
 const glob_1 = __importDefault(__nccwpck_require__(1957));
 const path_1 = __importDefault(__nccwpck_require__(1017));
 const glob = (0, util_1.promisify)(glob_1.default);
-const http = new http_client_1.default.HttpClient("");
+const http = new httpm.HttpClient("");
 function findFiles() {
     return __awaiter(this, void 0, void 0, function* () {
-        return glob(core_1.default.getInput("file"));
+        return glob(core.getInput("file"));
     });
 }
 function generateMagicString() {
-    const id = core_1.default.getInput("id") || "1";
+    const id = core.getInput("id") || "1";
     return `<!-- flamegraph.com:${id} -->`;
 }
 function upload(filepath) {
@@ -72,9 +95,9 @@ function NewSummary() {
                 return null;
             },
         };
-        return new Proxy(core_1.default.summary, handler);
+        return new Proxy(core.summary, handler);
     }
-    return core_1.default.summary;
+    return core.summary;
 }
 function buildSummary(files) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -90,12 +113,12 @@ function buildSummary(files) {
     });
 }
 function getToken() {
-    return core_1.default.getInput("token");
+    return core.getInput("token");
 }
 function findPreviousComment(repo, issueNumber) {
     return __awaiter(this, void 0, void 0, function* () {
         // TODO: receive octokit as a dependency
-        const octokit = github_1.default.getOctokit(getToken());
+        const octokit = github.getOctokit(getToken());
         const magicString = generateMagicString();
         // TODO: handle pagination
         const { data: comments } = yield octokit.rest.issues.listComments(Object.assign(Object.assign({}, repo), { issue_number: issueNumber }));
@@ -108,7 +131,7 @@ function postInBody(files, ctx) {
             throw new Error("Not a pull request");
         }
         const prNumber = ctx.payload.pull_request.number;
-        const octokit = github_1.default.getOctokit(getToken());
+        const octokit = github.getOctokit(getToken());
         const magicString = generateMagicString();
         const footer = 'Created by <a href="https://github.com/pyroscope-io/flamegraph.com-github-action">Flamegraph.com Github Action</a>';
         // target="_blank" doesn't seem to work
@@ -155,13 +178,13 @@ function run() {
                 const errMessage = error instanceof Error
                     ? error.message
                     : `Error uploading flamegraph: ${error}`;
-                core_1.default.setFailed(errMessage);
+                core.setFailed(errMessage);
                 return;
             }
         }
         yield buildSummary(uploadedFlamegraphs);
-        const context = github_1.default.context;
-        const shouldPostInPRBody = core_1.default.getInput("postInPR") && context.payload.pull_request;
+        const context = github.context;
+        const shouldPostInPRBody = core.getInput("postInPR") && context.payload.pull_request;
         if (shouldPostInPRBody) {
             yield postInBody(uploadedFlamegraphs, context);
         }
