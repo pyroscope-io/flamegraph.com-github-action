@@ -106,7 +106,7 @@ function buildSummary(files) {
             Summary.addHeading(f.filepath, 4)
                 .addLink("View Run in Flamegraph.com", f.url)
                 .addBreak()
-                .addRaw(`<a href="${f.url}" target="_blank"><img src="https://flamegraph.com/api/preview/${f.key}" /></a>`)
+                .addRaw(`<a href="${f.url}" target="_blank"><img src="https://flamegraph.com/api/preview/${f.key}?size=full" /></a>`)
                 .addSeparator();
         }
         yield Summary.write();
@@ -140,7 +140,7 @@ function postInBody(files, ctx) {
             .map((f) => {
             return `<details>
           <summary>${path_1.default.basename(f.filepath)}</summary>
-          <a href="${f.url}"><img src="https://flamegraph.com/api/preview/${f.key}" /></a>
+          <a href="${f.url}"><img src="https://flamegraph.com/api/preview/${f.key}?size=full" /></a>
           <br />
           <a href="${f.url}">See in flamegraph.com</a>
         </details>`;
