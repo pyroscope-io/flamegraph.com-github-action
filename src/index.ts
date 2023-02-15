@@ -86,7 +86,7 @@ async function buildSummary(files: UploadedFlamegraph[]): Promise<void> {
       .addLink("View Run in Flamegraph.com", f.url)
       .addBreak()
       .addRaw(
-        `<a href="${f.url}" target="_blank"><img src="https://flamegraph.com/api/preview/${f.key}" /></a>`
+        `<a href="${f.url}" target="_blank"><img src="https://flamegraph.com/api/preview/${f.key}?size=full" /></a>`
       )
       .addSeparator();
   }
@@ -135,7 +135,7 @@ async function postInBody(
           <summary>${path.basename(f.filepath)}</summary>
           <a href="${f.url}"><img src="https://flamegraph.com/api/preview/${
         f.key
-      }" /></a>
+      }?size=full" /></a>
           <br />
           <a href="${f.url}">See in flamegraph.com</a>
         </details>`;
